@@ -1,0 +1,109 @@
+import csv
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+# Função para carregar e estruturar os dados a partir do arquivo CSV
+def carregar_dados(arquivo):
+    dados = []
+    with open(arquivo, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Pular o cabeçalho
+        for linha in reader:
+            # Ajuste do formato da data para dd/mm/yyyy
+            data = datetime.strptime(linha[0], "%d/%m/%Y")  
+            precipitacao = float(linha[1]) if linha[1] else None
+            temp_max = float(linha[2]) if linha[2] else None
+            temp_min = float(linha[3]) if linha[3] else None
+            umidade = float(linha[4]) if linha[4] else None
+            vento = float(linha[5]) if linha[5] else None
+            dados.append({"data": data, "precipitacao": precipitacao, "temp_max": temp_max, "temp_min": temp_min, "umidade": umidade, "vento": vento})
+    return dados
+
+# Função para filtrar dados por período e tipo de informação
+def filtrar_dados(dados, ano_inicio, mes_inicio, ano_fim, mes_fim, tipo):
+    data_inicio = datetime(ano_inicio, mes_inicio, 1)
+    data_fim = datetime(ano_fim, mes_fim, 28)  # Assume último dia do mês
+    dados_filtrados = [dado for dado in dados if data_inicio <= dado["data"] <= data_fim]
+    
+    for dado in dados_filtrados:
+        data = dado["data"].strftime("%Y-%m-%d")
+        if tipo == 1:
+            print(f"Data: {data}, Precipitação: {dado['precipitacao']} mm, Temp Máx: {dado['temp_max']}°C, Temp Min: {dado['temp_min']}°C, Umidade: {dado['umidade']}%, Vento: {dado['vento']} m/s")
+        elif tipo == 2:
+            print(f"Data: {data}, Precipitação: {dado['precipitacao']} mm")
+        elif tipo == 3:
+            print(f"Data: {data}, Temp Máx: {dado['temp_max']}°C, Temp Min: {dado['temp_min']}°C")
+        elif tipo == 4:
+            print(f"Data: {data}, Umidade: {dado['umidade']}%, Vento: {dado['vento']} m/s")
+
+# Função para encontrar o mês mais chuvoso
+def mes_mais_chuvoso(dados):
+    chuva_por_mes = {}
+    for dado in dados:
+        ano_mes = (dado["data"].year, dado["data"].month)
+        if dado["precipitacao"] is not None:
+            chuva_por_mes[ano_mes] = chuva_por_mes.get(ano_mes, 0) + dado["precipitacao"]
+    mes_chuvoso = max(chuva_por_mes, key=chuva_por_mes.get)
+    print(f"O mês mais chuvoso foi {mes_chuvoso[1]}/{mes_chuvoso[0]} com precipitação de {chuva_por_mes[mes_chuvoso]} mm.")
+
+# Função para calcular média da temperatura mínima de um determinado mês nos últimos 11 anos
+def media_temp_minima(dados, mes):
+    media_por_ano = {}
+    for dado in dados:
+        if dado["data"].month == mes and 2006 <= dado["data"].year <= 2016:
+            ano = dado["data"].year
+            if dado["temp_min"] is not None:
+                media_por_ano[ano] = media_por_ano.get(ano, []) + [dado["temp_min"]]
+    medias = {f"{mes}/{ano}": sum(temps)/len(temps) for ano, temps in media_por_ano.items()}
+    for chave, media in medias.items():
+        print(f"{chave}: média de temperatura mínima = {media:.2f}°C")
+    return medias
+
+# Função para plotar gráfico de médias de temperatura mínima
+def plotar_grafico_mensal(medias, mes):
+    anos = list(medias.keys())
+    valores = list(medias.values())
+    plt.figure(figsize=(10, 5))
+    plt.bar(anos, valores, color='skyblue')
+    plt.xlabel("Ano")
+    plt.ylabel("Temperatura mínima média (°C)")
+    plt.title(f"Média de temperatura mínima em {mes}")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+# Função para calcular média geral de temperatura mínima em um determinado mês
+def media_geral(medias):
+    media_geral = sum(medias.values()) / len(medias)
+    print(f"Média geral da temperatura mínima: {media_geral:.2f}°C")
+
+# Função principal para execução
+def main():
+    arquivo = '/Users/giovannnicorrea/Desktop/PUC/Lógica e Programação de Computadores/Programas/Projetos Avaliativos/Fase 02/dados.csv'  # Nome do arquivo CSV na mesma pasta do código
+    dados = carregar_dados(arquivo)
+    
+    # Solicitar entradas do usuário para as funções
+    print("Escolha um período para visualização:")
+    ano_inicio = int(input("Ano inicial: "))
+    mes_inicio = int(input("Mês inicial (1-12): "))
+    ano_fim = int(input("Ano final: "))
+    mes_fim = int(input("Mês final (1-12): "))
+    tipo_dado = int(input("Escolha o tipo de dado para exibir (1-Todos, 2-Precipitação, 3-Temperatura, 4-Umidade e Vento): "))
+    
+    filtrar_dados(dados, ano_inicio, mes_inicio, ano_fim, mes_fim, tipo_dado)
+    
+    # Mês mais chuvoso
+    mes_mais_chuvoso(dados)
+    
+    # Média de temperatura mínima
+    mes = int(input("Digite o mês para calcular a média da temperatura mínima (1-12): "))
+    medias = media_temp_minima(dados, mes)
+    
+    # Gráfico das médias de temperatura mínima
+    plotar_grafico_mensal(medias, mes)
+    
+    # Média geral da temperatura mínima
+    media_geral(medias)
+
+if __name__ == "__main__":
+    main()
